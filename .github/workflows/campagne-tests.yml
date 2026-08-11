@@ -1,0 +1,61 @@
+name: Campagne de tests
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Lancer la campagne (simulee pour ce TP)
+        id: run-tests
+        run: |
+          # Dans un vrai pipeline, ce bloc lancerait la vraie campagne
+          # (fonctionnelle + perf) et produirait un vrai report.json.
+          # Ici, on simule un plan qui sort en orange pour tester la chaine.
+          COMMIT_AVANT="${{ github.event.before }}"
+          COMMIT_APRES="${{ github.sha }}"
+          if [ "$COMMIT_AVANT" = "0000000000000000000000000000000000000000" ]; then
+            COMMIT_AVANT="$COMMIT_APRES"
+          fi
+          cat > report.json << EOF
+          {
+            "plan": "PLAN-DEMO-01",
+            "status": "orange",
+            "ecarts": [
+              {
+                "type": "fonctionnel",
+                "test": "test_calcul_remise_fidelite",
+                "avant": "PASS",
+                "apres": "FAIL"
+              },
+              {
+                "type": "perte",
+                "metric": "temps_calcul_ms",
+                "avant": 120,
+                "apres": 340,
+                "seuil_regression_pct": 20
+              }
+            ],
+            "commit_avant": "$COMMIT_AVANT",
+            "commit_apres": "$COMMIT_APRES"
+          }
+          EOF
+          cat report.json
+
+      - name: Publier le rapport comme artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapport-ecarts
+          path: report.json
+
+      - name: Marquer le job en echec (le plan est orange)
+        run: exit 1

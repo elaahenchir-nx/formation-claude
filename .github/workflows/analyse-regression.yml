@@ -1,0 +1,80 @@
+name: Analyse automatique des regressions
+
+on:
+  workflow_run:
+    workflows: ["Campagne de tests"]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  analyse-regression:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion != 'success'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Recuperer le rapport d'ecarts de la campagne
+        uses: actions/download-artifact@v4
+        with:
+          name: rapport-ecarts
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verifier s'il y a vraiment des ecarts
+        id: check
+        run: |
+          if [ -f report.json ] && [ "$(jq '.ecarts | length' report.json)" -gt 0 ]; then
+            echo "orange=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "orange=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Installer Claude Code
+        if: steps.check.outputs.orange == 'true'
+        run: npm install -g @anthropic-ai/claude-code@VERSION
+
+      - name: Calculer le diff entre les deux versions comparees
+        if: steps.check.outputs.orange == 'true'
+        run: |
+          COMMIT_AVANT=$(jq -r '.commit_avant' report.json)
+          COMMIT_APRES=$(jq -r '.commit_apres' report.json)
+          git diff "$COMMIT_AVANT" "$COMMIT_APRES" -- . ':!package-lock.json' > diff-regression.txt
+          echo "--- report.json ---"
+          cat report.json
+          echo "--- diff-regression.txt ---"
+          cat diff-regression.txt
+
+      - name: Lancer l analyse de regression
+        if: steps.check.outputs.orange == 'true'
+        timeout-minutes: 10
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          claude -p "Utilise le skill analyse-regression-neoxam si disponible, sinon applique la meme methode directement.
+          Voici le rapport d'ecarts de la campagne (report.json) et le diff de code entre la version avant et la version apres (diff-regression.txt).
+          Pour chaque ecart du rapport, identifie dans le diff le changement le plus probablement responsable (fichier:ligne),
+          et produis un rapport priorise P0 (cause tres probable) / P1 (cause plausible) / P2 (a verifier, faible confiance).
+          Fichiers a lire: report.json et diff-regression.txt."
+
+# --- Variante B, si votre vraie CI n'est pas GitHub Actions (Jenkins, GitLab, etc.) ---
+# Remplacez le bloc "on:" ci-dessus par :
+#
+# on:
+#   repository_dispatch:
+#     types: [ecart-detecte]
+#
+# Et depuis votre pipeline externe, a la fin de la campagne, faites un appel HTTP (webhook) :
+#
+#   curl -X POST \
+#     -H "Authorization: token <PAT_avec_droit_repo>" \
+#     -H "Accept: application/vnd.github+json" \
+#     https://api.github.com/repos/<org>/<repo>/dispatches \
+#     -d '{"event_type":"ecart-detecte","client_payload":{"report_url":"<url_vers_report.json>"}}'
+#
+# Le job devra alors telecharger report.json depuis client_payload.report_url
+# au lieu de actions/download-artifact.
