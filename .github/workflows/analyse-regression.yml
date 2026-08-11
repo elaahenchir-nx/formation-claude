@@ -62,6 +62,23 @@ jobs:
           Fichiers a lire: report.json et diff-regression.txt.
           Repond uniquement en Markdown propre (titres, tableau), sans phrase d'introduction hors sujet." --allowedTools "Read,Bash,Grep,Glob" > rapport-regression.md
           cat rapport-regression.md
+          
+      - name: Publier le rapport dans le resume du run
+        if: steps.check.outputs.orange == 'true'
+        run: |
+          {
+            echo "## 🔍 Analyse de regression — $(jq -r '.plan' report.json)"
+            echo ""
+            cat rapport-regression.md
+          } >> "$GITHUB_STEP_SUMMARY"
+ 
+      - name: Publier le rapport comme artifact telechargeable
+        if: steps.check.outputs.orange == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapport-analyse-regression
+          path: rapport-regression.md
+ 
  
 
 # --- Variante B, si votre vraie CI n'est pas GitHub Actions (Jenkins, GitLab, etc.) ---
