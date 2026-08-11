@@ -53,7 +53,7 @@ jobs:
         if: steps.check.outputs.orange == 'true'
         timeout-minutes: 10
         env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.TOKEN_PROJET }}
         run: |
           claude -p "Utilise le skill analyse-regression-neoxam si disponible, sinon applique la meme methode directement.
           Voici le rapport d'ecarts de la campagne (report.json) et le diff de code entre la version avant et la version apres (diff-regression.txt).
