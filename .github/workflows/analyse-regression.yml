@@ -23,7 +23,7 @@ jobs:
         with:
           name: rapport-ecarts
           run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.TOKEN_PROJET }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Verifier s'il y a vraiment des ecarts
         id: check
