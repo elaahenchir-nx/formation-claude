@@ -23,7 +23,7 @@ jobs:
         with:
           name: rapport-ecarts
           run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.TOKEN_PROJET }}
 
       - name: Verifier s'il y a vraiment des ecarts
         id: check
@@ -59,7 +59,10 @@ jobs:
           Voici le rapport d'ecarts de la campagne (report.json) et le diff de code entre la version avant et la version apres (diff-regression.txt).
           Pour chaque ecart du rapport, identifie dans le diff le changement le plus probablement responsable (fichier:ligne),
           et produis un rapport priorise P0 (cause tres probable) / P1 (cause plausible) / P2 (a verifier, faible confiance).
-          Fichiers a lire: report.json et diff-regression.txt."
+          Fichiers a lire: report.json et diff-regression.txt.
+          Repond uniquement en Markdown propre (titres, tableau), sans phrase d'introduction hors sujet." --allowedTools "Read,Bash,Grep,Glob" > rapport-regression.md
+          cat rapport-regression.md
+ 
 
 # --- Variante B, si votre vraie CI n'est pas GitHub Actions (Jenkins, GitLab, etc.) ---
 # Remplacez le bloc "on:" ci-dessus par :

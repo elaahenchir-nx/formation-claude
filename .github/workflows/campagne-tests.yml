@@ -2,7 +2,7 @@ name: Campagne de tests
 
 on:
   push:
-    branches: [main]
+    branches: [master]
 
 permissions:
   contents: read
